@@ -110,6 +110,8 @@ int main(int argc, char* argv[]){
 		frameName = frameName;
 
 		// Read each frame from the list
+		printf("%s\n", frameName.c_str());
+		fflush(stdout);
 		frame = imread(frameName, CV_LOAD_IMAGE_COLOR);
 
 		// First frame, give the groundtruth to the tracker
