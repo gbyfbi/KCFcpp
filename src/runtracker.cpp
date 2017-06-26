@@ -118,12 +118,14 @@ int main(int argc, char* argv[]){
 		if (nFrames == 0) {
 			tracker.init( Rect(xMin, yMin, width, height), frame );
 			rectangle( frame, Point( xMin, yMin ), Point( xMin+width, yMin+height), Scalar( 0, 255, 255 ), 1, 8 );
+            circle( frame, Point( xMin, yMin ), 10, cv::Scalar(0, 0, 255), 5 );
 			resultsFile << xMin << "," << yMin << "," << width << "," << height << endl;
 		}
 		// Update
 		else{
 			result = tracker.update(frame);
 			rectangle( frame, Point( result.x, result.y ), Point( result.x+result.width, result.y+result.height), Scalar( 0, 255, 255 ), 1, 8 );
+            circle( frame, Point( result.x, result.y), 10, cv::Scalar(0, 0, 255), 5 );
 			resultsFile << result.x << "," << result.y << "," << result.width << "," << result.height << endl;
 		}
 
