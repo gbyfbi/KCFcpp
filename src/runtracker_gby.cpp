@@ -11,6 +11,7 @@
 #include <dirent.h>
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 
 using namespace std;
 using namespace cv;
@@ -165,7 +166,21 @@ int main(int argc, char* argv[]){
 	listFramesFile.open(imageListFilePath);
 	string frameName;
 
-
+	std::vector<ofstream> outputStreamVec;
+	for (int i = 0; i < initRegionFilePathVec.size(); i++) {
+		boost::filesystem::path regionFilePath(initRegionFilePathVec[i]);
+        std::string dir = regionFilePath.parent_path().string();
+		std::string fileName = regionFilePath.filename().string();
+		std::string ext = regionFilePath.extension().string();
+		std::string baseName = regionFilePath.stem().string();
+        cout <<dir<<';'<< fileName << ';' <<ext<<';'<<baseName<<';'<<endl<<flush;
+		std::string outputFileName = baseName+"_output"+ext;
+		std::string outputPath = boost::filesystem::path(dir).append(outputFileName).string();
+		cout << outputPath <<endl<<flush;
+//		ofstream resultsFile;
+//		resultsFile.open(resultsPath);
+//        outputStreamVec.push_back(resultsFile);
+	}
 	// Write Results
 //	ofstream resultsFile;
 //	resultsFile.open(resultsPath);

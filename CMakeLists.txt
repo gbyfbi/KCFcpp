@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(KCFCpp)
 
 find_package(OpenCV 3.2 REQUIRED)
-find_package(Boost REQUIRED COMPONENTS program_options)
+find_package(Boost REQUIRED COMPONENTS program_options filesystem)
 
 if(NOT WIN32)
 ADD_DEFINITIONS("-std=c++11 -O3")
