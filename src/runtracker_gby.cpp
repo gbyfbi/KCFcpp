@@ -10,11 +10,53 @@
 
 #include <dirent.h>
 #include <boost/program_options.hpp>
+#include <boost/algorithm/string.hpp>
 
 using namespace std;
 using namespace cv;
 namespace po = boost::program_options;
-
+class FourPoints {
+public:
+	float x1, y1, x2, y2, x3, y3, x4, y4;
+	float xMin, yMin, width, height;
+	FourPoints(std::string line) {
+		boost::algorithm::trim_if(line, boost::is_any_of("\n \t,;:"));
+		std::vector<std::string> str_component_vec;
+		boost::algorithm::split(str_component_vec, line, boost::is_any_of("\t ,;."));
+		if (str_component_vec.size() != 8) {
+			cerr << "region line must contain 8 integers!" <<endl;
+			throw "error";
+		}
+		x1 = std::stof(str_component_vec[0]);
+		y1 = std::stof(str_component_vec[1]);
+		x2 = std::stof(str_component_vec[2]);
+		y2 = std::stof(str_component_vec[3]);
+		x3 = std::stof(str_component_vec[4]);
+		y3 = std::stof(str_component_vec[5]);
+		x4 = std::stof(str_component_vec[6]);
+		y4 = std::stof(str_component_vec[7]);
+		xMin =  min(x1, min(x2, min(x3, x4)));
+		yMin =  min(y1, min(y2, min(y3, y4)));
+		width = max(x1, max(x2, max(x3, x4))) - xMin;
+		height = max(y1, max(y2, max(y3, y4))) - yMin;
+	}
+};
+class InitRegionSet {
+public:
+	std::vector<FourPoints> regionDescVec;
+    InitRegionSet(std::vector<std::string> initRegionDescFilePathVec) {
+		for (int i = 0; i < initRegionDescFilePathVec.size(); i++) {
+			std::string regionDescFilePath = initRegionDescFilePathVec[i];
+			ifstream groundtruthFile;
+			groundtruthFile.open(regionDescFilePath);
+			std::string regionLine;
+			getline(groundtruthFile, regionLine);
+			boost::algorithm::trim_if(regionLine, boost::is_any_of("\n \t"));
+			FourPoints oneRegion(regionLine);
+			regionDescVec.push_back(oneRegion);
+		}
+	}
+};
 int main(int argc, char* argv[]){
     int opt;
     po::options_description desc("Allowed options");
@@ -24,12 +66,9 @@ int main(int argc, char* argv[]){
 	bool MULTISCALE = false;
 	bool SILENT = false;
 	bool LAB = false;
-//	string fileName = "images.txt";
-	string groundTruth = "region.txt";
-	vector<string> initRegionFilePathList;
+	vector<string> initRegionFilePathVec;
 	string imageListFilePath = "images.txt";
 	string resultsPath = "output.txt";
-	std::vector<string> defaultResionFilePathList(1, std::string("region.txt"));
 	desc.add_options()
 			("help,h", "produce help message")
 //			("optimization", po::value<int>(&opt)->default_value(10), "optimization level")
@@ -39,7 +78,7 @@ int main(int argc, char* argv[]){
 			("multi-scale,M", po::bool_switch(&MULTISCALE)->default_value(false), "if use multiple scale")
 			("silent,S", po::bool_switch(&SILENT)->default_value(false), "if be silent and do not display")
 			("image-list,I", po::value<string>(&imageListFilePath)->default_value(string("images.txt")), "the input image list file path")
-			("init-region,R", po::value< vector<string> >(&initRegionFilePathList), "the input initial region file path(s)")
+			("init-region,R", po::value< vector<string> >(&initRegionFilePathVec), "the input initial region file path(s)")
 			("output,O", po::value<string>(&resultsPath), "the output tracking result path")
 //			("input-file", po::value< vector<string> >(), "input file")
 			;
@@ -84,11 +123,10 @@ int main(int argc, char* argv[]){
 	if (vm.count("init-region"))
 	{
 		cout << "--init-region ON with:" << endl;
-		std::vector<string> tt = vm["init-region"].as<std::vector<std::string> >();
-		for (int i = 0; i < tt.size(); i++) {
-			cout << "\t" << tt[i] <<endl;
+		initRegionFilePathVec = vm["init-region"].as<std::vector<std::string> >();
+		for (int i = 0; i < initRegionFilePathVec.size(); i++) {
+			cout << "\t" << initRegionFilePathVec[i] <<endl;
 		}
-		groundTruth = tt[0];
 	} else {
         fflush(stdout);
 		cerr << "--init-region is missing!(at least one should be specified.)" << endl;
@@ -110,71 +148,19 @@ int main(int argc, char* argv[]){
 		return -1;
 	}
 
-//	for(int i = 0; i < argc; i++){
-//		if ( strcmp (argv[i], "hog") == 0 )
-//			HOG = true;
-//		if ( strcmp (argv[i], "fixed_window") == 0 )
-//			FIXEDWINDOW = true;
-//		if ( strcmp (argv[i], "singlescale") == 0 )
-//			MULTISCALE = false;
-//		if ( strcmp (argv[i], "show") == 0 )
-//			SILENT = false;
-//		if ( strcmp (argv[i], "lab") == 0 ){
-//			LAB = true;
-//			HOG = true;
-//		}
-//		if ( strcmp (argv[i], "gray") == 0 )
-//			HOG = false;
-//	}
-	
+	InitRegionSet initRegionSet(initRegionFilePathVec);
 	// Create KCFTracker object
 	KCFTracker tracker(HOG, FIXEDWINDOW, MULTISCALE, LAB);
+	std::vector<KCFTracker> trackerVec;
+    for (int i = 0; i < initRegionFilePathVec.size(); i++) {
+		KCFTracker tr
+		trackerVec.push_back()
+	}
 
 	// Frame readed
 	Mat frame;
-
 	// Tracker results
 	Rect result;
-
-	// Path to list.txt
-//	ifstream listFile;
-//  	listFile.open(fileName);
-
-  	// Read groundTruth for the 1st frame
-  	ifstream groundtruthFile;
-  	groundtruthFile.open(groundTruth);
-  	string firstLine;
-  	getline(groundtruthFile, firstLine);
-	groundtruthFile.close();
-  	
-  	istringstream ss(firstLine);
-
-  	// Read groundTruth like a dumb
-  	float x1, y1, x2, y2, x3, y3, x4, y4;
-  	char ch;
-	ss >> x1;
-	ss >> ch;
-	ss >> y1;
-	ss >> ch;
-	ss >> x2;
-	ss >> ch;
-	ss >> y2;
-	ss >> ch;
-	ss >> x3;
-	ss >> ch;
-	ss >> y3;
-	ss >> ch;
-	ss >> x4;
-	ss >> ch;
-	ss >> y4; 
-
-	// Using min and max of X and Y for groundTruth rectangle
-	float xMin =  min(x1, min(x2, min(x3, x4)));
-	float yMin =  min(y1, min(y2, min(y3, y4)));
-	float width = max(x1, max(x2, max(x3, x4))) - xMin;
-	float height = max(y1, max(y2, max(y3, y4))) - yMin;
-
-	
 	// Read Images
 	ifstream listFramesFile;
 	listFramesFile.open(imageListFilePath);
@@ -188,35 +174,38 @@ int main(int argc, char* argv[]){
 	// Frame counter
 	int nFrames = 0;
 
-
 	while ( getline(listFramesFile, frameName) ){
-		frameName = frameName;
+        for (int i = 0; i < initRegionFilePathVec.size(); i++) {
+			const float xMin = initRegionSet.regionDescVec[i].xMin;
+			const float yMin = initRegionSet.regionDescVec[i].yMin;
+			const float width = initRegionSet.regionDescVec[i].width;
+			const float height = initRegionSet.regionDescVec[i].height;
+			// Read each frame from the list
+            cout << frameName << endl << flush;
+			frame = imread(frameName, CV_LOAD_IMAGE_COLOR);
 
-		// Read each frame from the list
-		printf("%s\n", frameName.c_str());
-		fflush(stdout);
-		frame = imread(frameName, CV_LOAD_IMAGE_COLOR);
+			// First frame, give the groundTruth to the tracker
+			if (nFrames == 0) {
+				tracker.init( Rect(xMin, yMin, width, height), frame );
+				rectangle( frame, Point( xMin, yMin ), Point( xMin+width, yMin+height), Scalar( 0, 255, 255 ), 1, 8 );
+				circle( frame, Point( xMin, yMin ), 10, cv::Scalar(0, 0, 255), 5 );
+				resultsFile << xMin << "," << yMin << "," << width << "," << height << endl;
+			}
+				// Update
+			else{
+				result = tracker.update(frame);
+				rectangle( frame, Point( result.x, result.y ), Point( result.x+result.width, result.y+result.height), Scalar( 0, 255, 255 ), 1, 8 );
+				circle( frame, Point( result.x, result.y), 10, cv::Scalar(0, 0, 255), 5 );
+				resultsFile << result.x << "," << result.y << "," << result.width << "," << result.height << endl;
+			}
 
-		// First frame, give the groundTruth to the tracker
-		if (nFrames == 0) {
-			tracker.init( Rect(xMin, yMin, width, height), frame );
-			rectangle( frame, Point( xMin, yMin ), Point( xMin+width, yMin+height), Scalar( 0, 255, 255 ), 1, 8 );
-            circle( frame, Point( xMin, yMin ), 10, cv::Scalar(0, 0, 255), 5 );
-			resultsFile << xMin << "," << yMin << "," << width << "," << height << endl;
-		}
-		// Update
-		else{
-			result = tracker.update(frame);
-			rectangle( frame, Point( result.x, result.y ), Point( result.x+result.width, result.y+result.height), Scalar( 0, 255, 255 ), 1, 8 );
-            circle( frame, Point( result.x, result.y), 10, cv::Scalar(0, 0, 255), 5 );
-			resultsFile << result.x << "," << result.y << "," << result.width << "," << result.height << endl;
-		}
+			nFrames++;
 
-		nFrames++;
+			if (!SILENT){
+				imshow("Image", frame);
+				waitKey(1);
+			}
 
-		if (!SILENT){
-			imshow("Image", frame);
-			waitKey(1);
 		}
 	}
 	resultsFile.close();
