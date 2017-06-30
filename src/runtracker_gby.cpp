@@ -150,11 +150,10 @@ int main(int argc, char* argv[]){
 
 	InitRegionSet initRegionSet(initRegionFilePathVec);
 	// Create KCFTracker object
-	KCFTracker tracker(HOG, FIXEDWINDOW, MULTISCALE, LAB);
 	std::vector<KCFTracker> trackerVec;
     for (int i = 0; i < initRegionFilePathVec.size(); i++) {
-		KCFTracker tr
-		trackerVec.push_back()
+		KCFTracker tracker(HOG, FIXEDWINDOW, MULTISCALE, LAB);
+		trackerVec.push_back(tracker);
 	}
 
 	// Frame readed
@@ -168,48 +167,44 @@ int main(int argc, char* argv[]){
 
 
 	// Write Results
-	ofstream resultsFile;
-	resultsFile.open(resultsPath);
+//	ofstream resultsFile;
+//	resultsFile.open(resultsPath);
 
 	// Frame counter
 	int nFrames = 0;
-
 	while ( getline(listFramesFile, frameName) ){
+        cout << frameName << endl << flush;
+        frame = imread(frameName, CV_LOAD_IMAGE_COLOR);
+        cv::Mat frameToDisplay;
+        frame.copyTo(frameToDisplay);
+        cv::Mat frameToWork;
+        frame.copyTo(frameToWork);
         for (int i = 0; i < initRegionFilePathVec.size(); i++) {
+			KCFTracker & tracker = trackerVec[i];
 			const float xMin = initRegionSet.regionDescVec[i].xMin;
 			const float yMin = initRegionSet.regionDescVec[i].yMin;
 			const float width = initRegionSet.regionDescVec[i].width;
 			const float height = initRegionSet.regionDescVec[i].height;
-			// Read each frame from the list
-            cout << frameName << endl << flush;
-			frame = imread(frameName, CV_LOAD_IMAGE_COLOR);
-
 			// First frame, give the groundTruth to the tracker
 			if (nFrames == 0) {
-				tracker.init( Rect(xMin, yMin, width, height), frame );
-				rectangle( frame, Point( xMin, yMin ), Point( xMin+width, yMin+height), Scalar( 0, 255, 255 ), 1, 8 );
-				circle( frame, Point( xMin, yMin ), 10, cv::Scalar(0, 0, 255), 5 );
-				resultsFile << xMin << "," << yMin << "," << width << "," << height << endl;
+				tracker.init( Rect(xMin, yMin, width, height), frameToWork );
+				rectangle( frameToDisplay, Point( xMin, yMin ), Point( xMin+width, yMin+height), Scalar( 0, 255, 255 ), 1, 8 );
+//				circle( frame, Point( xMin, yMin ), 10, cv::Scalar(0, 0, 255), 5 );
+//				resultsFile << xMin << "," << yMin << "," << width << "," << height << endl;
 			}
 				// Update
 			else{
-				result = tracker.update(frame);
-				rectangle( frame, Point( result.x, result.y ), Point( result.x+result.width, result.y+result.height), Scalar( 0, 255, 255 ), 1, 8 );
-				circle( frame, Point( result.x, result.y), 10, cv::Scalar(0, 0, 255), 5 );
-				resultsFile << result.x << "," << result.y << "," << result.width << "," << result.height << endl;
+				result = tracker.update(frameToWork);
+				rectangle( frameToDisplay, Point( result.x, result.y ), Point( result.x+result.width, result.y+result.height), Scalar( 0, 255, 255 ), 1, 8 );
+//				circle( frame, Point( result.x, result.y), 10, cv::Scalar(0, 0, 255), 5 );
+//				resultsFile << result.x << "," << result.y << "," << result.width << "," << result.height << endl;
 			}
-
-			nFrames++;
-
-			if (!SILENT){
-				imshow("Image", frame);
-				waitKey(1);
-			}
-
 		}
+        if (!SILENT){
+            imshow("Image", frameToDisplay);
+            waitKey(1);
+        }
+        nFrames++;
 	}
-	resultsFile.close();
-
-//	listFile.close();
-
+//	resultsFile.close();
 }

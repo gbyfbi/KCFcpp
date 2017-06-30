@@ -5,7 +5,7 @@ find_package(OpenCV 3.2 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options)
 
 if(NOT WIN32)
-ADD_DEFINITIONS("-std=c++0x -O3")
+ADD_DEFINITIONS("-std=c++11 -O3")
 endif(NOT WIN32)
 
 include_directories(src) 
