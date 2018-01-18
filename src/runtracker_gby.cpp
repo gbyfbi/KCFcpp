@@ -11,6 +11,7 @@
 #include <dirent.h>
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 
 using namespace std;
 using namespace cv;
@@ -165,7 +166,20 @@ int main(int argc, char* argv[]){
 	listFramesFile.open(imageListFilePath);
 	string frameName;
 
-
+	std::vector<ofstream> outputStreamVec;
+	std::vector<shared_ptr<ofstream>> ofstreamVec;
+	for (int i = 0; i < initRegionFilePathVec.size(); i++) {
+		boost::filesystem::path regionFilePath(initRegionFilePathVec[i]);
+        std::string dir = regionFilePath.parent_path().string();
+		std::string fileName = regionFilePath.filename().string();
+		std::string ext = regionFilePath.extension().string();
+		std::string baseName = regionFilePath.stem().string();
+        cout <<dir<<';'<< fileName << ';' <<ext<<';'<<baseName<<';'<<endl<<flush;
+		std::string outputFileName = baseName+"_output"+ext;
+		std::string outputPath = boost::filesystem::path(dir).append(outputFileName).string();
+		cout << outputPath <<endl<<flush;
+		ofstreamVec.push_back(make_shared<ofstream>(outputPath));
+	}
 	// Write Results
 //	ofstream resultsFile;
 //	resultsFile.open(resultsPath);
@@ -177,8 +191,6 @@ int main(int argc, char* argv[]){
         frame = imread(frameName, CV_LOAD_IMAGE_COLOR);
         cv::Mat frameToDisplay;
         frame.copyTo(frameToDisplay);
-        cv::Mat frameToWork;
-        frame.copyTo(frameToWork);
         for (int i = 0; i < initRegionFilePathVec.size(); i++) {
 			KCFTracker & tracker = trackerVec[i];
 			const float xMin = initRegionSet.regionDescVec[i].xMin;
@@ -187,17 +199,22 @@ int main(int argc, char* argv[]){
 			const float height = initRegionSet.regionDescVec[i].height;
 			// First frame, give the groundTruth to the tracker
 			if (nFrames == 0) {
-				tracker.init( Rect(xMin, yMin, width, height), frameToWork );
+				tracker.init( Rect(xMin, yMin, width, height), frame );
 				rectangle( frameToDisplay, Point( xMin, yMin ), Point( xMin+width, yMin+height), Scalar( 0, 255, 255 ), 1, 8 );
 //				circle( frame, Point( xMin, yMin ), 10, cv::Scalar(0, 0, 255), 5 );
-//				resultsFile << xMin << "," << yMin << "," << width << "," << height << endl;
+				*ofstreamVec[i] << xMin << "," << yMin << "," << width << "," << height << endl;
 			}
 				// Update
 			else{
-				result = tracker.update(frameToWork);
-				rectangle( frameToDisplay, Point( result.x, result.y ), Point( result.x+result.width, result.y+result.height), Scalar( 0, 255, 255 ), 1, 8 );
+				result = tracker.update(frame);
 //				circle( frame, Point( result.x, result.y), 10, cv::Scalar(0, 0, 255), 5 );
-//				resultsFile << result.x << "," << result.y << "," << result.width << "," << result.height << endl;
+				const float x_min = max(result.x, 0);
+				const float y_min = max(result.y, 0);
+                const float x_max = min(frame.cols, result.x + result.width);
+				const float y_max = min(frame.rows, result.y + result.height);
+				rectangle( frameToDisplay, Point( x_min, y_min ), Point( x_max, y_max), Scalar( 0, 255, 255 ), 1, 8 );
+//				*ofstreamVec[i] << result.x << "," << result.y << "," << result.width << "," << result.height << endl;
+				*ofstreamVec[i] << x_min << "," << y_min << "," << x_max - x_min << "," << y_max - y_min << endl;
 			}
 		}
         if (!SILENT){
@@ -205,6 +222,9 @@ int main(int argc, char* argv[]){
             waitKey(1);
         }
         nFrames++;
+	}
+    for(auto & ofs: ofstreamVec) {
+		ofs->close();
 	}
 //	resultsFile.close();
 }
